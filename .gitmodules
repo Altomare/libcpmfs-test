@@ -4,3 +4,6 @@
 [submodule "hxc"]
 	path = hxc
 	url = git@github.com:jfdelnero/HxCFloppyEmulator.git
+[submodule "libcpmfs"]
+	path = libcpmfs
+	url = git@github.com:Altomare/libcpmfs.git
