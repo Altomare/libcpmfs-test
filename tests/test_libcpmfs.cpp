@@ -96,6 +96,50 @@ TEST_F(BasicTest, ReadFiles) {
   CHECK_LIBCPMFS(cpm_fs_destroy(fs));
 }
 
+/* Delete every file then write a very big one then read back and check.
+ * File has a size of 131k (256 * 512) */
+TEST(WriteTests, WriteReadBack) {
+  CpmFloppyImage image("disks/otrona.img", otrona_attrs);
+  struct cpm_fs_file_handle *f;
+  struct cpm_fs_file *cpmfile;
+  struct cpm_fs_dir *dirp;
+  struct cpm_fs *fs;
+  uint8_t buf[512];
+  size_t c_read;
+  size_t c_written;
+
+  CHECK_LIBCPMFS(cpm_fs_new(&otrona_attrs, &cpm_get_sector, &cpm_set_sector,
+                            image.userdata(), &fs));
+
+  /* Iterate over files and delete them */
+  CHECK_LIBCPMFS(cpm_fs_opendir(fs, &dirp));
+  CHECK_LIBCPMFS(cpm_fs_readdir(fs, dirp, &cpmfile));
+  while (cpmfile) {
+    CHECK_LIBCPMFS(cpm_fs_unlink(fs, cpmfile->d_name, cpmfile->d_user));
+    CHECK_LIBCPMFS(cpm_fs_readdir(fs, dirp, &cpmfile));
+  }
+  CHECK_LIBCPMFS(cpm_fs_closedir(fs, dirp));
+
+  /* Write */
+  CHECK_LIBCPMFS(cpm_fs_open(fs, "testfil.tst", CPM_MODE_RDWR, 7, &f));
+  for (int i = 0; i < 256; ++i) {
+    buf[0] = 'A' + (i % 26);
+    CHECK_LIBCPMFS(cpm_fs_write(fs, f, buf, 512, &c_written));
+    ASSERT_EQ(c_written, (size_t)512);
+  }
+  CHECK_LIBCPMFS(cpm_fs_close(fs, f));
+
+  /* Read back and check values */
+  CHECK_LIBCPMFS(cpm_fs_open(fs, "testfil.tst", CPM_MODE_RDONLY, 7, &f));
+  for (int i = 0; i < 135; ++i) {
+    CHECK_LIBCPMFS(cpm_fs_read(fs, f, buf, 512, &c_read));
+    ASSERT_EQ(buf[0], 'A' + (i % 26));
+  }
+  CHECK_LIBCPMFS(cpm_fs_close(fs, f));
+
+  CHECK_LIBCPMFS(cpm_fs_destroy(fs));
+}
+
 } // namespace
 
 int main(int argc, char **argv) {

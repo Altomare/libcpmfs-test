@@ -15,9 +15,7 @@ TEST_BIN := run_tests
 
 # Deps
 GTEST_BUILD := googletest/build
-GTEST_LIBS := \
-	$(GTEST_BUILD)/lib/libgtest.a \
-	$(GTEST_BUILD)/lib/libgtest_main.a
+GTEST_LIBS  := $(GTEST_BUILD)/lib/libgtest.a
 
 HXC_LIB := hxc/build/libhxcfe.so
 
@@ -38,7 +36,7 @@ hxc:
 gtest:
 	@echo "Build gtest"
 	@mkdir -p $(GTEST_BUILD)
-	@cd googletest/build && cmake .. && $(MAKE) gtest gtest_main
+	@cd googletest/build && cmake .. && $(MAKE) gtest
 
 $(TEST_BIN): hxc gtest libcpmfs $(TEST_SRC)
 	$(CXX) $(CXXFLAGS) \
