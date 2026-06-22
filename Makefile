@@ -8,7 +8,9 @@ CXXFLAGS := \
 	-IHXC/include \
 	-Ilibcpmfs/include
 
-TEST_SRC := tests/test_gtest.cpp tests/floppy_utils.cpp
+TEST_SRC := \
+	tests/test_libcpmfs.cpp \
+	tests/floppy_utils.cpp
 TEST_BIN := run_tests
 
 # Deps

@@ -57,6 +57,7 @@ TEST_F(BasicTest, ListFiles) {
   CHECK_LIBCPMFS(cpm_fs_destroy(fs));
 }
 
+/* Read every file and check if the announced size matches what we read */
 TEST_F(BasicTest, ReadFiles) {
   struct cpm_fs_file_handle *f;
   struct cpm_fs_file *cpmfile;
