@@ -10,6 +10,7 @@ CXXFLAGS := \
 
 TEST_SRC := \
 	tests/test_libcpmfs.cpp \
+	tests/disk_definitions.cpp \
 	tests/floppy_utils.cpp
 TEST_BIN := run_tests
 
@@ -40,6 +41,7 @@ gtest:
 
 $(TEST_BIN): hxc gtest libcpmfs $(TEST_SRC)
 	$(CXX) $(CXXFLAGS) \
+	    -I hxc/libhxcfe/sources/ \
 	    $(TEST_SRC) \
 	    $(HXC_LIB) \
 	    $(GTEST_LIBS) \

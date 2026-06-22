@@ -8,6 +8,24 @@
 
 #include <libcpmfs.h>
 
+#include "disk_definitions.hh"
+
+
+class HxCFloppyImage {
+public:
+	HxCFloppyImage(DiskSettings &settings);
+	~HxCFloppyImage();
+	void *userdata() { return this; }
+	int read_sector(uint32_t cylinder, uint32_t head, uint32_t sector, uint8_t *out_sector) const;
+	int write_sector(uint32_t cylinder, uint32_t head, uint32_t sector, const uint8_t *in_sector);
+private:
+	DiskSettings &settings_;
+	HXCFE *hxcfe_;
+	HXCFE_FLOPPY *floppy_;
+	HXCFE_IMGLDR *loader_;
+	HXCFE_SECTORACCESS *sector_access_;
+};
+
 
 class CpmFloppyImage {
 public:

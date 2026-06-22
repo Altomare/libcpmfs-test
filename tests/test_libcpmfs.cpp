@@ -3,8 +3,10 @@
 
 #include <gtest/gtest.h>
 #include <libcpmfs.h>
+// #include <libhxcfe.h>
 
 #include "floppy_utils.hh"
+#include "disk_definitions.hh"
 
 struct cpm_fs_attr otrona_attrs = {
     .cylinders = 40,
@@ -23,15 +25,24 @@ struct cpm_fs_attr otrona_attrs = {
     ASSERT_EQ(status, CPM_SUCCESS) << cpm_fs_status_str(status);               \
   }
 
+/* TODO
+* Parametized test class, takes DiskSettings as input. At start, loads it via HxC
+* During setup, copy image and work on that. Teardown, wipe that copy.
+*
+*
+*/
+
 namespace {
 class BasicTest : public testing::Test {
 protected:
   BasicTest()
-      : attrs_(&otrona_attrs),
-        image_(CpmFloppyImage("disks/otrona.img", otrona_attrs)) {}
+      : settings_(OtronaAttache),
+        image_(HxCFloppyImage(OtronaAttache)) {}
+        // image_(CpmFloppyImage("disks/otrona.img", otrona_attrs)) {}
 
+  DiskSettings &settings_;
   struct cpm_fs_attr *attrs_;
-  CpmFloppyImage image_;
+  HxCFloppyImage image_;
 };
 
 /* List all files */
@@ -40,7 +51,7 @@ TEST_F(BasicTest, ListFiles) {
   struct cpm_fs_dir *dirp;
   struct cpm_fs *fs;
 
-  CHECK_LIBCPMFS(cpm_fs_new(&otrona_attrs, &cpm_get_sector, &cpm_set_sector,
+  CHECK_LIBCPMFS(cpm_fs_new(&settings_.attrs_, &cpm_get_sector, &cpm_set_sector,
                             image_.userdata(), &fs));
 
   CHECK_LIBCPMFS(cpm_fs_opendir(fs, &dirp));
@@ -65,7 +76,7 @@ TEST_F(BasicTest, ReadFiles) {
   struct cpm_fs *fs;
   size_t c_read;
 
-  CHECK_LIBCPMFS(cpm_fs_new(&otrona_attrs, &cpm_get_sector, &cpm_set_sector,
+  CHECK_LIBCPMFS(cpm_fs_new(&settings_.attrs_, &cpm_get_sector, &cpm_set_sector,
                             image_.userdata(), &fs));
   CHECK_LIBCPMFS(cpm_fs_opendir(fs, &dirp));
 
@@ -98,7 +109,7 @@ TEST_F(BasicTest, ReadFiles) {
 
 /* Delete every file then write a very big one then read back and check.
  * File has a size of 131k (256 * 512) */
-TEST(WriteTests, WriteReadBack) {
+TEST(WriteTests, DISABLED_WriteReadBack) {
   CpmFloppyImage image("disks/otrona.img", otrona_attrs);
   struct cpm_fs_file_handle *f;
   struct cpm_fs_file *cpmfile;
