@@ -28,8 +28,6 @@ struct cpm_fs_attr otrona_attrs = {
 /* TODO
 * Parametized test class, takes DiskSettings as input. At start, loads it via HxC
 * During setup, copy image and work on that. Teardown, wipe that copy.
-*
-*
 */
 
 namespace {
@@ -109,8 +107,9 @@ TEST_F(BasicTest, ReadFiles) {
 
 /* Delete every file then write a very big one then read back and check.
  * File has a size of 131k (256 * 512) */
+// TODO: move to fixture class
 TEST(WriteTests, DISABLED_WriteReadBack) {
-  CpmFloppyImage image("disks/otrona.img", otrona_attrs);
+  HxCFloppyImage image(OtronaAttache);
   struct cpm_fs_file_handle *f;
   struct cpm_fs_file *cpmfile;
   struct cpm_fs_dir *dirp;

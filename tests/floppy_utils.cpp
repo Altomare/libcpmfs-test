@@ -3,8 +3,6 @@
 
 #include "floppy_utils.hh"
 
-#include <cstdio>
-#include <cstring>
 #include <stdexcept>
 
 HxCFloppyImage::HxCFloppyImage(DiskSettings &settings)
@@ -31,19 +29,13 @@ HxCFloppyImage::HxCFloppyImage(DiskSettings &settings)
 		throw std::runtime_error("hxcfe_initSectorAccess");
 }
 
-/*
-int32_t hxcfe_readSectorData(HXCFE_SECTORACCESS *ss_ctx, int32_t track,
-                             int32_t side, int32_t sector,
-                             int32_t numberofsector, int32_t sectorsize,
-                             int32_t type, uint8_t *buffer, int32_t *fdcstatus);
-*/
 int HxCFloppyImage::read_sector(uint32_t cylinder, uint32_t head,
                                uint32_t sector, uint8_t *out_sector) const
 {
 	int status;
 
-	/* Sector numbering is not the same between the two.
-	 * TODO: Actually no it differs. Otrona uses the same, Bondwell not  */
+	/* Sector numbering is not the same between us and libhxcfe.
+	 * TODO: Actually no it depends. Otrona uses the same, Bondwell not  */
 	// sector -= 1;
 	hxcfe_readSectorData(sector_access_,
 			     cylinder,
@@ -65,7 +57,7 @@ int HxCFloppyImage::write_sector(uint32_t cylinder, uint32_t head, uint32_t sect
 {
 	int status;
 
-	sector -= 1;
+	// sector -= 1;
 	hxcfe_writeSectorData(sector_access_,
 			     cylinder,
 			     head,
@@ -87,59 +79,6 @@ HxCFloppyImage::~HxCFloppyImage()
 	hxcfe_imgUnload(loader_, floppy_);
 	hxcfe_imgDeInitLoader(loader_);
 	hxcfe_deinit(hxcfe_);
-}
-
-CpmFloppyImage::CpmFloppyImage(const char *path, const cpm_fs_attr &attrs)
-	: attrs_(attrs)
-{
-	FILE *fp = std::fopen(path, "rb+");
-	if (!fp)
-		throw std::runtime_error("failed to open image file");
-
-	if (std::fseek(fp, 0, SEEK_END) != 0) {
-		std::fclose(fp);
-		throw std::runtime_error("failed to seek image file");
-	}
-	long size = std::ftell(fp);
-	std::fseek(fp, 0, SEEK_SET);
-	if (size < 0) {
-		std::fclose(fp);
-		throw std::runtime_error("failed to determine file size");
-	}
-
-	data_.resize(static_cast<size_t>(size));
-	size_t got = std::fread(data_.data(), 1, data_.size(), fp);
-	std::fclose(fp);
-	if (got != data_.size())
-		throw std::runtime_error("failed to read full image");
-}
-
-uint32_t CpmFloppyImage::chs_to_offset(uint32_t cylinder, uint32_t head, uint32_t sector) const
-{
-	uint32_t cylinder_size = attrs_.sector_count * attrs_.sector_size;
-	uint32_t offset = cylinder * cylinder_size * 2;
-	offset += (sector - 1) * attrs_.sector_size;
-	if (head == 1)
-		offset += attrs_.sector_count * attrs_.sector_size;
-	return offset;
-}
-
-int CpmFloppyImage::get_sector(uint32_t cylinder, uint32_t head, uint32_t sector, uint8_t *out_sector) const
-{
-	uint32_t offset = chs_to_offset(cylinder, head, sector);
-	if (static_cast<size_t>(offset) + attrs_.sector_size > data_.size())
-		return -1;
-	std::memcpy(out_sector, data_.data() + offset, attrs_.sector_size);
-	return 0;
-}
-
-int CpmFloppyImage::set_sector(uint32_t cylinder, uint32_t head, uint32_t sector, const uint8_t *in_sector)
-{
-	uint32_t offset = chs_to_offset(cylinder, head, sector);
-	if (static_cast<size_t>(offset) + attrs_.sector_size > data_.size())
-		return -1;
-	std::memcpy(data_.data() + offset, in_sector, attrs_.sector_size);
-	return 0;
 }
 
 extern "C" int cpm_get_sector(void *userdata,
