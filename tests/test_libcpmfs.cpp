@@ -3,10 +3,9 @@
 
 #include <gtest/gtest.h>
 #include <libcpmfs.h>
-// #include <libhxcfe.h>
 
-#include "floppy_utils.hh"
 #include "disk_definitions.hh"
+#include "floppy_utils.hh"
 
 struct cpm_fs_attr otrona_attrs = {
     .cylinders = 40,
@@ -25,32 +24,29 @@ struct cpm_fs_attr otrona_attrs = {
     ASSERT_EQ(status, CPM_SUCCESS) << cpm_fs_status_str(status);               \
   }
 
-/* TODO
-* Parametized test class, takes DiskSettings as input. At start, loads it via HxC
-* During setup, copy image and work on that. Teardown, wipe that copy.
-*/
-
 namespace {
-class BasicTest : public testing::Test {
-protected:
-  BasicTest()
-      : settings_(OtronaAttache),
-        image_(HxCFloppyImage(OtronaAttache)) {}
-        // image_(CpmFloppyImage("disks/otrona.img", otrona_attrs)) {}
+class BasicTest : public testing::TestWithParam<DiskSettings *> {
+public:
+  BasicTest() {
+    settings_ = GetParam();
+    image_ = new HxCFloppyImage(*settings_);
+  }
+  ~BasicTest() { delete image_; }
 
-  DiskSettings &settings_;
-  struct cpm_fs_attr *attrs_;
-  HxCFloppyImage image_;
+  void SetUp() override { image_->reset_disk(); }
+
+  DiskSettings *settings_;
+  HxCFloppyImage *image_;
 };
 
 /* List all files */
-TEST_F(BasicTest, ListFiles) {
+TEST_P(BasicTest, ListFiles) {
   struct cpm_fs_file *cpmfile;
   struct cpm_fs_dir *dirp;
   struct cpm_fs *fs;
 
-  CHECK_LIBCPMFS(cpm_fs_new(&settings_.attrs_, &cpm_get_sector, &cpm_set_sector,
-                            image_.userdata(), &fs));
+  CHECK_LIBCPMFS(cpm_fs_new(&settings_->attrs_, &cpm_get_sector,
+                            &cpm_set_sector, image_->userdata(), &fs));
 
   CHECK_LIBCPMFS(cpm_fs_opendir(fs, &dirp));
 
@@ -67,15 +63,15 @@ TEST_F(BasicTest, ListFiles) {
 }
 
 /* Read every file and check if the announced size matches what we read */
-TEST_F(BasicTest, ReadFiles) {
+TEST_P(BasicTest, ReadFiles) {
   struct cpm_fs_file_handle *f;
   struct cpm_fs_file *cpmfile;
   struct cpm_fs_dir *dirp;
   struct cpm_fs *fs;
   size_t c_read;
 
-  CHECK_LIBCPMFS(cpm_fs_new(&settings_.attrs_, &cpm_get_sector, &cpm_set_sector,
-                            image_.userdata(), &fs));
+  CHECK_LIBCPMFS(cpm_fs_new(&settings_->attrs_, &cpm_get_sector,
+                            &cpm_set_sector, image_->userdata(), &fs));
   CHECK_LIBCPMFS(cpm_fs_opendir(fs, &dirp));
 
   CHECK_LIBCPMFS(cpm_fs_readdir(fs, dirp, &cpmfile));
@@ -105,11 +101,15 @@ TEST_F(BasicTest, ReadFiles) {
   CHECK_LIBCPMFS(cpm_fs_destroy(fs));
 }
 
+INSTANTIATE_TEST_SUITE_P(
+    CpmFloppyGauntlet, BasicTest, testing::Values(&OtronaAttache, &Bondwell12),
+    [](const testing::TestParamInfo<DiskSettings *> &info) {
+      return info.param->name_;
+    });
+
 /* Delete every file then write a very big one then read back and check.
  * File has a size of 131k (256 * 512) */
-// TODO: move to fixture class
-TEST(WriteTests, DISABLED_WriteReadBack) {
-  HxCFloppyImage image(OtronaAttache);
+TEST_P(BasicTest, WriteReadBack) {
   struct cpm_fs_file_handle *f;
   struct cpm_fs_file *cpmfile;
   struct cpm_fs_dir *dirp;
@@ -118,8 +118,8 @@ TEST(WriteTests, DISABLED_WriteReadBack) {
   size_t c_read;
   size_t c_written;
 
-  CHECK_LIBCPMFS(cpm_fs_new(&otrona_attrs, &cpm_get_sector, &cpm_set_sector,
-                            image.userdata(), &fs));
+  CHECK_LIBCPMFS(cpm_fs_new(&settings_->attrs_, &cpm_get_sector,
+                            &cpm_set_sector, image_->userdata(), &fs));
 
   /* Iterate over files and delete them */
   CHECK_LIBCPMFS(cpm_fs_opendir(fs, &dirp));
